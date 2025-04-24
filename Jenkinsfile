@@ -62,7 +62,7 @@ pipeline {
                  script {
                      echo "Deploying container..."
                      def containerName = "grilli-website-live"
-                     def hostPort = 8080 // Choose an available port on the agent machine
+                     def hostPort = 8081 // Choose an available port on the agent machine
 
                      // Stop and remove any existing container with the same name
                      sh "docker stop ${containerName} || true"
