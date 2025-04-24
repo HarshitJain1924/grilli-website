@@ -1,0 +1,21 @@
+# Ignore Git directory
+.git
+.gitignore
+
+# Ignore Docker related files
+Dockerfile
+.dockerignore
+
+# Ignore Jenkins related files
+Jenkinsfile
+
+# Ignore IDE/OS specific files (add more as needed)
+.vscode/
+.idea/
+*.DS_Store
+node_modules/
+npm-debug.log
+
+# Ignore any local build artifacts if you have them
+# build/
+# dist/
