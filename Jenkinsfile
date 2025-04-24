@@ -57,12 +57,6 @@ pipeline {
             }
         }
         */
-
-        // --- Optional Stage: Deploy ---
-        // This is a VERY basic example of deploying by running the container
-        // on the Jenkins agent itself. Real-world deployment might involve
-        // SSHing to a server, using Kubernetes kubectl, Ansible, etc.
-        /*
         stage('4. Deploy (Simple Example)') {
             steps {
                  script {
@@ -81,7 +75,6 @@ pipeline {
                  }
             }
         }
-        */
     }
 
     post {
