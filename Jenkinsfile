@@ -38,7 +38,6 @@ pipeline {
         // --- Optional Stage: Push to Docker Registry ---
         // Uncomment this stage if you want to push the image.
         // Requires Docker Hub (or other registry) credentials configured in Jenkins.
-        /*
         stage('3. Push Docker Image') {
             // Only run this stage on the 'main' branch, for example
             // when { branch 'main' }
@@ -56,7 +55,7 @@ pipeline {
                 }
             }
         }
-        */
+        
         stage('4. Deploy (Simple Example)') {
             steps {
                  script {
