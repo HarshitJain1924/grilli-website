@@ -1035,6 +1035,7 @@ header{
 
 .menu .card-banner{
   flex-shrink: 0;
+  width: 100px;
   border-radius: var(--radius-24);
 }
 

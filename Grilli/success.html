@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reservation Successful - Grilli</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;700&family=Forum&display=swap" rel="stylesheet">
+    <!-- Main Style -->
+    <link rel="stylesheet" href="./assets/css/style.css">
+    <style>
+        body {
+            background-color: var(--smoky-black-1);
+            color: var(--white);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            text-align: center;
+            padding: 20px;
+        }
+        .success-card {
+            background-color: var(--smoky-black-2);
+            padding: 60px 40px;
+            border: 1px solid var(--gold-crayola);
+            max-width: 500px;
+            width: 100%;
+        }
+        .icon {
+            font-size: 80px;
+            color: var(--gold-crayola);
+            margin-bottom: 20px;
+        }
+        .title {
+            margin-bottom: 15px;
+        }
+        .text {
+            color: var(--quick-silver);
+            margin-bottom: 30px;
+        }
+        .btn-home {
+            display: inline-block;
+            background-color: var(--gold-crayola);
+            color: var(--black);
+            padding: 12px 30px;
+            text-decoration: none;
+            font-weight: bold;
+            transition: 0.3s;
+        }
+        .btn-home:hover {
+            background-color: var(--white);
+        }
+    </style>
+</head>
+<body>
+    <div class="success-card">
+        <div class="icon">✓</div>
+        <h1 class="headline-1 title">Reservation Received!</h1>
+        <p class="label-1 text">Thank you for choosing Grilli. We have received your reservation request and look forward to serving you soon.</p>
+        <a href="index.html" class="btn btn-secondary">
+            <span class="text text-1">Back to Home</span>
+            <span class="text text-2" aria-hidden="true">Back to Home</span>
+        </a>
+    </div>
+</body>
+</html>

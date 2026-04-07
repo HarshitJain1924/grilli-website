@@ -9,9 +9,12 @@
 
 const preloader = document.querySelector("[data-preaload]");
 
-window.addEventListener("load", function() {
-    preloader.classList.add("loaded");
-    document.body.classList.add("loaded");
+window.addEventListener("DOMContentLoaded", function() {
+    // End preloader faster for better performance
+    setTimeout(() => {
+        preloader.classList.add("loaded");
+        document.body.classList.add("loaded");
+    }, 500); 
 });
 
 
@@ -119,7 +122,7 @@ const SliderNext = function () {
     updateSliderPos();
 }
 
-heroSliderNextBtn.addEventListener("click", SliderNext);
+if (heroSliderNextBtn) heroSliderNextBtn.addEventListener("click", SliderNext);
 
 const sliderPrev = function () {
     if (currentSlidePos <= 0) {
@@ -130,7 +133,7 @@ const sliderPrev = function () {
     updateSliderPos();
 }
 
-heroSliderPrevBtn.addEventListener("click", sliderPrev);
+if (heroSliderPrevBtn) heroSliderPrevBtn.addEventListener("click", sliderPrev);
 
 // auto slide
 
@@ -142,18 +145,20 @@ const autoSlide = function () {
     }, 7000);
 }
 
-addEventOnElements([heroSliderNextBtn, heroSliderPrevBtn],"mouseover", function (){
-    clearInterval(autoSlideInterval);
-});
+if (heroSliderNextBtn && heroSliderPrevBtn) {
+    addEventOnElements([heroSliderNextBtn, heroSliderPrevBtn],"mouseover", function (){
+        clearInterval(autoSlideInterval);
+    });
 
-addEventOnElements([heroSliderNextBtn, heroSliderPrevBtn],"mouseout", autoSlide);
+    addEventOnElements([heroSliderNextBtn, heroSliderPrevBtn],"mouseout", autoSlide);
+}
 
-window.addEventListener("load", autoSlide);
+if (heroSlider) window.addEventListener("load", autoSlide);
 
 
 /**
  * PARALLAX EFFECT
-*/
+ */
 
 const parallaxItems = document.querySelectorAll("[data-parallax-item]");
 
@@ -174,3 +179,105 @@ window.addEventListener("mousemove", function (event) {
     }
 });
 
+/**
+ * API INTEGRATION
+ */
+
+const API_BASE_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+    ? 'http://localhost:5000/api'
+    : '/api';
+
+const fetchMenu = async () => {
+    try {
+        const response = await fetch(API_BASE_URL + '/menu');
+        const items = await response.json();
+        const homeList = document.getElementById('menu-list');
+        const fullList = document.getElementById('full-menu-list');
+        
+        if (!items.length) {
+            console.log("No menu items found in API");
+            return;
+        }
+
+        let html = '';
+        items.forEach(item => {
+            const badge = item.badge ? '<span class="badge label-1">' + item.badge + '</span>' : '';
+            html += '<li>' +
+                '<div class="menu-card hover:card">' +
+                '<figure class="card-banner img-holder" style="--width: 100; --height: 100;">' +
+                '<img src="' + item.image + '" width="100" height="100" loading="lazy" alt="' + item.name + '" class="img-cover">' +
+                '</figure>' +
+                '<div>' +
+                '<div class="title-wrapper">' +
+                '<h3 class="title-3"><a href="#" class="card-title">' + item.name + '</a></h3>' +
+                badge +
+                '<span class="span title-2">' + item.price + '</span>' +
+                '</div>' +
+                '<p class="card-text label-1">' + item.description + '</p>' +
+                '</div>' +
+                '</div>' +
+                '</li>';
+        });
+
+        if (homeList) homeList.innerHTML = html;
+        if (fullList) fullList.innerHTML = html;
+        
+    } catch (err) {
+        console.error('Menu fetch error:', err);
+    }
+};
+
+const fetchTestimonials = async () => {
+    try {
+        const response = await fetch(API_BASE_URL + '/testimonials');
+        const items = await response.json();
+        const container = document.getElementById('testimonials-container');
+        if (!container || !items.length) return;
+
+        const testi = items[0];
+        container.innerHTML = '<div class="quote">”</div>' +
+            '<p class="headline-2 testi-text">' + testi.text + '</p>' +
+            '<div class="wrapper">' +
+            '<div class="separator"></div><div class="separator"></div><div class="separator"></div>' +
+            '</div>' +
+            '<div class="profile">' +
+            '<img src="' + testi.image + '" width="100" height="100" loading="lazy" alt="' + testi.name + '" class="img">' +
+            '<p class="label-2 profile-name">' + testi.name + '</p>' +
+            '</div>';
+    } catch (err) {
+        console.error('Testimonials fetch error:', err);
+    }
+};
+
+const handleReservation = async (event) => {
+    event.preventDefault();
+    const form = event.target;
+    const formData = new FormData(form);
+    const data = Object.fromEntries(formData.entries());
+
+    try {
+        const response = await fetch(API_BASE_URL + '/reserve', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+
+        if (response.ok) {
+            window.location.href = 'success.html';
+        } else {
+            alert('Failed to make reservation.');
+        }
+    } catch (err) {
+        console.error('Reservation error:', err);
+        alert('An error occurred.');
+    }
+};
+
+document.addEventListener('DOMContentLoaded', () => {
+    fetchMenu();
+    fetchTestimonials();
+    const resForm = document.getElementById('reservation-form');
+    if (resForm) {
+        resForm.addEventListener('submit', handleReservation);
+    }
+});

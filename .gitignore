@@ -1,0 +1,26 @@
+# Dependencies
+node_modules/
+backend/node_modules/
+
+# Environment Variables
+.env
+backend/.env
+
+# OS Files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDES and Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Temporary Files
+temp_images/
+menu_images.zip
+*.log
+
+# Docker Caches
+.docker/

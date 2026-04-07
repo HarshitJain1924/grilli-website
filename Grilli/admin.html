@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - Grilli Reservations</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;700&family=Forum&display=swap" rel="stylesheet">
+    <!-- Main Style -->
+    <link rel="stylesheet" href="./assets/css/style.css">
+    <style>
+        body {
+            background-color: var(--smoky-black-1);
+            color: var(--white);
+            padding: 40px 20px;
+            font-family: 'DM Sans', sans-serif;
+            display: none; /* Hidden until authenticated */
+            font-size: 1.1rem; /* Overall font boost */
+        }
+        .admin-container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 50px;
+            border-bottom: 2px solid var(--gold-crayola);
+            padding-bottom: 30px;
+        }
+        .title {
+            font-family: 'Forum', cursive;
+            color: var(--gold-crayola);
+            font-size: 3.5rem;
+        }
+        .res-table {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: var(--smoky-black-2);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.6);
+        }
+        .res-table th, .res-table td {
+            text-align: left;
+            padding: 25px 20px; /* More padding for readability */
+            border-bottom: 1px solid #3a3a3a;
+        }
+        .res-table th {
+            color: var(--gold-crayola);
+            font-family: 'Forum', cursive;
+            font-size: 1.4rem;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+        .res-table td {
+            font-size: 1.2rem; /* Larger data text */
+            line-height: 1.5;
+        }
+        .status-badge {
+            background: var(--gold-crayola);
+            color: var(--black);
+            padding: 5px 12px;
+            font-size: 0.9rem;
+            font-weight: bold;
+            border-radius: 6px;
+        }
+        .loading, .error {
+            text-align: center;
+            padding: 60px;
+            font-size: 1.5rem;
+        }
+        .error { color: #ff6b6b; }
+        
+        .msg-text {
+            color: #d1d1d1; /* Lighter color for readability */
+            max-width: 350px;
+            display: inline-block;
+        }
+
+        @media (max-width: 1024px) {
+            .res-table { font-size: 1rem; display: block; overflow-x: auto; }
+            .title { font-size: 2.5rem; }
+        }
+    </style>
+</head>
+<body>
+    <div class="admin-container">
+        <div class="header">
+            <h1 class="headline-1 title">Admin Dashboard</h1>
+            <div style="display: flex; gap: 15px;">
+                <button onclick="clearAllReservations()" class="btn btn-secondary" style="background-color: #ff4757; color: white; border: none;">
+                    <span class="text text-1">Clear Database</span>
+                    <span class="text text-2" aria-hidden="true">Clear Database</span>
+                </button>
+                <button onclick="logout()" class="btn btn-secondary">
+                    <span class="text text-1">Log Out</span>
+                    <span class="text text-2" aria-hidden="true">Log Out</span>
+                </button>
+            </div>
+        </div>
+
+        <div id="reservations-root">
+            <div class="loading">Loading your restaurant's bookings...</div>
+        </div>
+    </div>
+
+    <script>
+        // --- BASIC PASS PROTECTION ---
+        const PASS = "admin123";
+        function authenticate() {
+            const userInput = prompt("Enter Admin Password:");
+            if (userInput === PASS) {
+                document.body.style.display = "block";
+                fetchReservations();
+            } else {
+                alert("Incorrect Password! Access Denied.");
+                window.location.href = "index.html";
+            }
+        }
+
+        function logout() {
+            window.location.href = "index.html";
+        }
+
+        // --- DATA FETCHING ---
+        const API_BASE_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+            ? 'http://localhost:5000/api'
+            : '/api';
+
+        async function fetchReservations() {
+            const root = document.getElementById('reservations-root');
+            try {
+                const res = await fetch(API_BASE_URL + '/admin/reservations');
+                const data = await res.json();
+
+                if (!data || data.length === 0) {
+                    root.innerHTML = '<div class="loading">No bookings found yet.</div>';
+                    return;
+                }
+
+                let html = `
+                    <table class="res-table">
+                        <thead>
+                            <tr>
+                                <th>Booking Time</th>
+                                <th>Customer Name</th>
+                                <th>Guests</th>
+                                <th>Contact Details</th>
+                                <th>Special Message</th>
+                                <th>Received At</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+
+                data.forEach(r => {
+                    const receivedAt = new Date(r.createdAt).toLocaleString();
+                    const dateVal = r.date || r["reservation-date"] || "N/A";
+                    const timeVal = r.time || "N/A";
+                    
+                    html += `
+                        <tr>
+                            <td><strong>${dateVal}</strong><br><span style="font-size: 0.9rem; color: #aaa;">at ${timeVal}</span></td>
+                            <td>${r.name}</td>
+                            <td><span class="status-badge">${r.person || '1'}</span></td>
+                            <td>${r.phone}</td>
+                            <td><span class="msg-text">${r.message || '-'}</span></td>
+                            <td style="font-size: 0.9rem; opacity: 0.7;">${receivedAt}</td>
+                        </tr>
+                    `;
+                });
+
+                html += '</tbody></table>';
+                root.innerHTML = html;
+
+            } catch (err) {
+                console.error(err);
+                root.innerHTML = '<div class="error">Failed to load reservations. Check console.</div>';
+            }
+        }
+
+        async function clearAllReservations() {
+            if (confirm("🚨 DANGER: Are you sure you want to delete ALL booking data permanently?")) {
+                try {
+                    const response = await fetch(API_BASE_URL + '/admin/reservations', {
+                        method: 'DELETE'
+                    });
+                    
+                    if (response.ok) {
+                        alert("Database wiped clean 🧼");
+                        fetchReservations(); // Refresh the table
+                    } else {
+                        alert("Error wiping database.");
+                    }
+                } catch (err) {
+                    console.error(err);
+                    alert("Network error.");
+                }
+            }
+        }
+
+        // Start authentication
+        authenticate();
+    </script>
+</body>
+</html>

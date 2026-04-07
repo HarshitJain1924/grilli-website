@@ -1,16 +1,8 @@
 pipeline {
-    // Agent: Specify where the pipeline will run.
-    // 'any' means Jenkins can use any available agent.
-    // Make sure Docker is installed and runnable by the 'jenkins' user on this agent.
     agent any
 
-    // Environment variables (optional, useful for tagging)
     environment {
-        // If you're not pushing yet, this can be any name.
         IMAGE_NAME = "harshitjain1924/grilli-app"
-        // Example: Use a simple registry if not Docker Hub
-        // REGISTRY = "your-registry.example.com"
-        // IMAGE_NAME = "${REGISTRY}/grilli-app"
     }
 
     stages {
