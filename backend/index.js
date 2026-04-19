@@ -2,6 +2,18 @@ const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
 require("dotenv").config();
+const client = require("prom-client");
+
+// Prometheus Metrics Setup
+const collectDefaultMetrics = client.collectDefaultMetrics;
+collectDefaultMetrics({ register: client.register });
+
+const httpRequestDurationMicroseconds = new client.Histogram({
+  name: "http_request_duration_seconds",
+  help: "Duration of HTTP requests in seconds",
+  labelNames: ["method", "route", "code"],
+  buckets: [0.1, 0.3, 0.5, 0.7, 1, 3, 5, 7, 10],
+});
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -9,6 +21,25 @@ const PORT = process.env.PORT || 5000;
 // Middleware
 app.use(cors());
 app.use(express.json());
+
+// Metrics Middleware
+app.use((req, res, next) => {
+  const end = httpRequestDurationMicroseconds.startTimer();
+  res.on("finish", () => {
+    end({
+      method: req.method,
+      route: req.route ? req.route.path : req.path,
+      code: res.statusCode,
+    });
+  });
+  next();
+});
+
+// Metrics Endpoint
+app.get("/metrics", async (req, res) => {
+  res.set("Content-Type", client.register.contentType);
+  res.end(await client.register.metrics());
+});
 
 // MongoDB connection
 const mongoUri = process.env.MONGODB_URI || "mongodb://mongodb:27017/grilli";
@@ -177,6 +208,7 @@ const testimonials = [
 ];
 
 // Routes
+app.get("/api/health", (req, res) => res.status(200).json({ status: "ok" }));
 app.get("/api/menu", (req, res) => res.json(menuItems));
 app.get("/api/testimonials", (req, res) => res.json(testimonials));
 

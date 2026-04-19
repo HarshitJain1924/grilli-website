@@ -1,0 +1,246 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: monitoring
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-config
+  namespace: monitoring
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval: 15s
+    scrape_configs:
+      - job_name: 'grilli-backend'
+        kubernetes_sd_configs:
+          - role: pod
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_pod_label_app]
+            action: keep
+            regex: backend
+          - source_labels: [__address__]
+            action: replace
+            regex: ([^:]+)(?::\d+)?
+            replacement: $1:5000
+            target_label: __address__
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prometheus
+  namespace: monitoring
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: prometheus
+  template:
+    metadata:
+      labels:
+        app: prometheus
+    spec:
+      containers:
+      - name: prometheus
+        image: prom/prometheus:latest
+        args:
+          - "--config.file=/etc/prometheus/prometheus.yml"
+          - "--storage.tsdb.path=/prometheus"
+        ports:
+        - containerPort: 9090
+        volumeMounts:
+        - name: config-volume
+          mountPath: /etc/prometheus
+        - name: data-volume
+          mountPath: /prometheus
+      volumes:
+      - name: config-volume
+        configMap:
+          name: prometheus-config
+      - name: data-volume
+        emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: prometheus
+  namespace: monitoring
+spec:
+  selector:
+    app: prometheus
+  ports:
+    - protocol: TCP
+      port: 9090
+      targetPort: 9090
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-provisioning
+  namespace: monitoring
+data:
+  datasource.yaml: |
+    apiVersion: 1
+    datasources:
+      - name: Prometheus
+        type: prometheus
+        access: proxy
+        url: http://prometheus:9090
+        isDefault: true
+        uid: 'grilli-prom'
+  dashboard-provider.yaml: |
+    apiVersion: 1
+    providers:
+      - name: 'default'
+        orgId: 1
+        folder: ''
+        type: file
+        disableDeletion: false
+        editable: true
+        options:
+          path: /var/lib/grafana/dashboards
+  alerting.yaml: |
+    apiVersion: 1
+    groups:
+      - orgId: 1
+        name: 'grilli-alerts'
+        folder: 'Grilli Alerts'
+        interval: '1m'
+        rules:
+          - uid: 'cpu-usage-alert'
+            title: 'CPU Usage (%)'
+            data:
+              - refId: 'A'
+                datasourceUid: 'grilli-prom'
+                relativeTimeRange:
+                  from: 300
+                  to: 0
+                model:
+                  expr: 'max(rate(process_cpu_user_seconds_total[1m]) * 100)'
+                  intervalMs: 1000
+                  maxDataPoints: 43200
+                  refId: 'A'
+              - refId: 'B'
+                datasourceUid: '-100'
+                model:
+                  expression: 'A'
+                  type: 'reduce'
+                  reducer: 'last'
+                  refId: 'B'
+              - refId: 'C'
+                datasourceUid: '-100'
+                model:
+                  expression: 'B'
+                  type: 'threshold'
+                  conditions:
+                    - evaluator:
+                        params: [70]
+                        type: 'gt'
+                      operator:
+                        type: 'and'
+                      query:
+                        params: []
+                  refId: 'C'
+            condition: 'C'
+            noDataState: 'NoData'
+            execErrState: 'Error'
+            for: '1m'
+            annotations:
+              summary: 'High CPU Usage on Backend'
+              description: 'CPU usage is above 70% for more than 1 minute.'
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grilli-dashboard
+  namespace: monitoring
+data:
+  grilli-stats.json: |
+    {
+      "annotations": { "list": [ { "builtIn": 1, "datasource": "-- Grafana --", "enable": true, "hide": true, "iconColor": "rgba(0, 211, 255, 1)", "name": "Annotations & Alerts", "type": "dashboard" } ] },
+      "editable": true, "gnetId": null, "graphTooltip": 0, "id": null, "links": [], "panels": [
+        { "datasource": "Prometheus", "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" }, "mappings": [], "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null }, { "color": "red", "value": 80 } ] } }, "overrides": [] }, "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 }, "id": 2, "options": { "legend": { "calcs": [], "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "single", "sort": "none" } }, "title": "API Request Count", "type": "timeseries", "targets": [ { "expr": "sum(http_request_duration_seconds_count) by (route)", "refId": "A" } ] },
+        { "datasource": "Prometheus", "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" }, "mappings": [], "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null }, { "color": "red", "value": 80 } ] } }, "overrides": [] }, "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 }, "id": 3, "options": { "legend": { "calcs": [], "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "single", "sort": "none" } }, "title": "Memory Usage (MB)", "type": "timeseries", "targets": [ { "expr": "nodejs_external_memory_bytes / 1024 / 1024", "refId": "A" } ] },
+        { "datasource": "Prometheus", "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "mappings": [], "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null }, { "color": "red", "value": 70 } ] } }, "overrides": [] }, "gridPos": { "h": 8, "w": 24, "x": 0, "y": 8 }, "id": 4, "options": { "legend": { "calcs": [], "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "single", "sort": "none" } }, "title": "CPU Usage (%)", "type": "timeseries", "targets": [ { "expr": "rate(process_cpu_user_seconds_total[1m]) * 100", "refId": "A" } ] }
+      ], "schemaVersion": 30, "style": "dark", "tags": [], "templating": { "list": [] }, "time": { "from": "now-15m", "to": "now" }, "timepicker": {}, "timezone": "", "title": "Grilli Website Monitoring", "uid": "grilli-stats", "version": 1
+    }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grafana
+  namespace: monitoring
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: grafana
+  template:
+    metadata:
+      labels:
+        app: grafana
+    spec:
+      containers:
+      - name: grafana
+        image: grafana/grafana:latest
+        ports:
+        - containerPort: 3000
+        env:
+        - name: GF_SECURITY_ADMIN_PASSWORD
+          value: "admin"
+        volumeMounts:
+        - name: provisioning-volume
+          mountPath: /etc/grafana/provisioning/datasources/datasource.yaml
+          subPath: datasource.yaml
+        - name: provisioning-volume
+          mountPath: /etc/grafana/provisioning/dashboards/dashboard-provider.yaml
+          subPath: dashboard-provider.yaml
+        - name: provisioning-volume
+          mountPath: /etc/grafana/provisioning/alerting/alerting.yaml
+          subPath: alerting.yaml
+        - name: dashboard-volume
+          mountPath: /var/lib/grafana/dashboards
+      volumes:
+      - name: provisioning-volume
+        configMap:
+          name: grafana-provisioning
+      - name: dashboard-volume
+        configMap:
+          name: grilli-dashboard
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: grafana
+  namespace: monitoring
+spec:
+  selector:
+    app: grafana
+  ports:
+    - protocol: TCP
+      port: 3000
+      targetPort: 3000
+---
+# RBAC for Prometheus to see pods
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: prometheus
+rules:
+- apiGroups: [""]
+  resources: ["pods", "services", "endpoints"]
+  verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: prometheus
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: prometheus
+subjects:
+- kind: ServiceAccount
+  name: default
+  namespace: monitoring
