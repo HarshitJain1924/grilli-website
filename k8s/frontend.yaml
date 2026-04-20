@@ -18,8 +18,8 @@ spec:
             value: "1"
       containers:
       - name: frontend
-        image: grilli-frontend:v6
-        imagePullPolicy: IfNotPresent
+        image: harshitjain1924/grilli-frontend:latest
+        imagePullPolicy: Always
         ports:
         - containerPort: 80
         resources:
