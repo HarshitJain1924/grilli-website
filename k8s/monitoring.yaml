@@ -12,6 +12,12 @@ data:
   prometheus.yml: |
     global:
       scrape_interval: 15s
+    alerting:
+      alertmanagers:
+        - static_configs:
+            - targets: ['alertmanager:9093']
+    rule_files:
+      - '/etc/prometheus/alert.rules'
     scrape_configs:
       - job_name: 'grilli-backend'
         kubernetes_sd_configs:
@@ -25,6 +31,18 @@ data:
             regex: ([^:]+)(?::\d+)?
             replacement: $1:5000
             target_label: __address__
+  alert.rules: |
+    groups:
+      - name: grilli-alerts
+        rules:
+          - alert: HighCPUUsage
+            expr: rate(process_cpu_user_seconds_total[1m]) * 100 > 70
+            for: 1m
+            labels:
+              severity: warning
+            annotations:
+              summary: 'High CPU Usage on Backend'
+              description: 'CPU usage is above 70% for more than 1 minute.'
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -100,66 +118,7 @@ data:
         editable: true
         options:
           path: /var/lib/grafana/dashboards
-  alerting.yaml: |
-    apiVersion: 1
-    contactPoints:
-      - orgId: 1
-        name: 'email-admin'
-        receivers:
-          - uid: email1
-            type: email
-            settings:
-              addresses: "harshit1924jain@gmail.com"
-    policies:
-      - orgId: 1
-        receiver: 'email-admin'
-    groups:
-      - orgId: 1
-        name: 'grilli-alerts'
-        folder: 'Grilli Alerts'
-        interval: '1m'
-        rules:
-          - uid: 'cpu-usage-alert'
-            title: 'CPU Usage (%)'
-            data:
-              - refId: 'A'
-                datasourceUid: 'grilli-prom'
-                relativeTimeRange:
-                  from: 300
-                  to: 0
-                model:
-                  expr: 'max(rate(process_cpu_user_seconds_total[1m]) * 100)'
-                  intervalMs: 1000
-                  maxDataPoints: 43200
-                  refId: 'A'
-              - refId: 'B'
-                datasourceUid: '-100'
-                model:
-                  expression: 'A'
-                  type: 'reduce'
-                  reducer: 'last'
-                  refId: 'B'
-              - refId: 'C'
-                datasourceUid: '-100'
-                model:
-                  expression: 'B'
-                  type: 'threshold'
-                  conditions:
-                    - evaluator:
-                        params: [70]
-                        type: 'gt'
-                      operator:
-                        type: 'and'
-                      query:
-                        params: []
-                  refId: 'C'
-            condition: 'C'
-            noDataState: 'NoData'
-            execErrState: 'Error'
-            for: '1m'
-            annotations:
-              summary: 'High CPU Usage on Backend'
-              description: 'CPU usage is above 70% for more than 1 minute.'
+
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -231,9 +190,7 @@ spec:
         - name: provisioning-volume
           mountPath: /etc/grafana/provisioning/dashboards/dashboard-provider.yaml
           subPath: dashboard-provider.yaml
-        - name: provisioning-volume
-          mountPath: /etc/grafana/provisioning/alerting/alerting.yaml
-          subPath: alerting.yaml
+
         - name: dashboard-volume
           mountPath: /var/lib/grafana/dashboards
       volumes:
@@ -279,3 +236,78 @@ subjects:
 - kind: ServiceAccount
   name: default
   namespace: monitoring
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: alertmanager-config
+  namespace: monitoring
+data:
+  alertmanager.yml: |
+    global:
+      smtp_smarthost: 'smtp.gmail.com:587'
+      smtp_from: 'harshit1924jain@gmail.com'
+      smtp_auth_username: 'harshit1924jain@gmail.com'
+      smtp_auth_password_file: '/etc/alertmanager/secrets/SMTP_PASSWORD'
+      smtp_require_tls: true
+
+    route:
+      group_by: ['alertname']
+      group_wait: 10s
+      group_interval: 1m
+      repeat_interval: 1h
+      receiver: 'email-admin'
+
+    receivers:
+    - name: 'email-admin'
+      email_configs:
+      - to: 'harshit1924jain@gmail.com'
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: alertmanager
+  namespace: monitoring
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: alertmanager
+  template:
+    metadata:
+      labels:
+        app: alertmanager
+    spec:
+      containers:
+      - name: alertmanager
+        image: prom/alertmanager:latest
+        args:
+          - "--config.file=/etc/alertmanager/alertmanager.yml"
+        ports:
+        - containerPort: 9093
+        volumeMounts:
+        - name: config-volume
+          mountPath: /etc/alertmanager
+        - name: secret-volume
+          mountPath: /etc/alertmanager/secrets
+          readOnly: true
+      volumes:
+      - name: config-volume
+        configMap:
+          name: alertmanager-config
+      - name: secret-volume
+        secret:
+          secretName: grilli-secrets
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: alertmanager
+  namespace: monitoring
+spec:
+  selector:
+    app: alertmanager
+  ports:
+    - protocol: TCP
+      port: 9093
+      targetPort: 9093
