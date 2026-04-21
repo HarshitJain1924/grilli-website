@@ -24,3 +24,6 @@ menu_images.zip
 
 # Docker Caches
 .docker/
+
+# Kubernetes Secrets
+k8s/secrets.yaml
