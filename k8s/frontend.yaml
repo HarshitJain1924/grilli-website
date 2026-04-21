@@ -17,30 +17,30 @@ spec:
           - name: ndots
             value: "1"
       containers:
-      - name: frontend
-        image: harshitjain1924/grilli-frontend:latest
-        imagePullPolicy: Always
-        ports:
-        - containerPort: 80
-        resources:
-          limits:
-            cpu: "200m"
-            memory: "128Mi"
-          requests:
-            cpu: "100m"
-            memory: "64Mi"
-        livenessProbe:
-          httpGet:
-            path: /health
-            port: 80
-          initialDelaySeconds: 15
-          periodSeconds: 20
-        readinessProbe:
-          httpGet:
-            path: /health
-            port: 80
-          initialDelaySeconds: 5
-          periodSeconds: 10
+        - name: frontend
+          image: harshitjain1924/grilli-frontend:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 80
+          resources:
+            limits:
+              cpu: "200m"
+              memory: "128Mi"
+            requests:
+              cpu: "100m"
+              memory: "64Mi"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 80
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 80
+            initialDelaySeconds: 5
+            periodSeconds: 10
 ---
 apiVersion: v1
 kind: Service
@@ -48,8 +48,8 @@ metadata:
   name: frontend-service
 spec:
   ports:
-  - port: 9090
-    targetPort: 80
+    - port: 80
+      targetPort: 80
   selector:
     app: frontend
   type: LoadBalancer

@@ -27,7 +27,7 @@ All manifests are organized within the `/k8s` directory for modular management:
 
 ### 2. Service Discovery & Networking
 
-- **External Access**: The `frontend-service` is exposed via a `LoadBalancer` (port 9090).
+- **External Access**: The `frontend-service` is exposed via a `LoadBalancer` (port 80).
 - **Internal Communication**: Services communicate securely via internal DNS names (e.g., `backend-service:5000`).
 
 ### 3. Data & Configuration Management (`secrets.yaml` & `configmap.yaml`)
@@ -69,7 +69,7 @@ The project implements a professional **Continuous Integration and Continuous De
 The project uses automated scripts to streamline common tasks on Windows:
 
 - **`deploy.bat`**: The master deployment script. It builds Docker images, sets up the Metrics Server, and applies all application manifests in the correct order.
-- **`run.bat`**: A helper script to quickly port-forward the project to `localhost:9090` for local access.
+- **`run.bat`**: A helper script to quickly port-forward the project to `localhost:80` for local access.
 - **`monitor.bat`**: Launches the Prometheus/Grafana dashboard for live cluster analytics.
 
 ---
