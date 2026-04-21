@@ -102,6 +102,17 @@ data:
           path: /var/lib/grafana/dashboards
   alerting.yaml: |
     apiVersion: 1
+    contactPoints:
+      - orgId: 1
+        name: 'email-admin'
+        receivers:
+          - uid: email1
+            type: email
+            settings:
+              addresses: "harshit1924jain@gmail.com"
+    policies:
+      - orgId: 1
+        receiver: 'email-admin'
     groups:
       - orgId: 1
         name: 'grilli-alerts'
@@ -189,6 +200,30 @@ spec:
         env:
         - name: GF_SECURITY_ADMIN_PASSWORD
           value: "admin"
+        - name: GF_SMTP_ENABLED
+          value: "true"
+        - name: GF_SMTP_SKIP_VERIFY
+          value: "true"
+        - name: GF_SMTP_FROM_ADDRESS
+          valueFrom:
+            secretKeyRef:
+              name: grilli-secrets
+              key: SMTP_USER
+        - name: GF_SMTP_HOST
+          valueFrom:
+            secretKeyRef:
+              name: grilli-secrets
+              key: SMTP_HOST
+        - name: GF_SMTP_USER
+          valueFrom:
+            secretKeyRef:
+              name: grilli-secrets
+              key: SMTP_USER
+        - name: GF_SMTP_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: grilli-secrets
+              key: SMTP_PASSWORD
         volumeMounts:
         - name: provisioning-volume
           mountPath: /etc/grafana/provisioning/datasources/datasource.yaml
