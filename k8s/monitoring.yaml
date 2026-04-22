@@ -43,6 +43,22 @@ data:
             annotations:
               summary: 'High CPU Usage on Backend'
               description: 'CPU usage is above 70% for more than 1 minute.'
+          - alert: TargetDown
+            expr: up == 0
+            for: 1m
+            labels:
+              severity: critical
+            annotations:
+              summary: 'Grilli Backend is DOWN'
+              description: 'Prometheus cannot scrape the backend. The server might have crashed!'
+          - alert: HighErrorRate
+            expr: rate(http_request_duration_seconds_count{status=~"5.."}[1m]) > 0.5
+            for: 1m
+            labels:
+              severity: critical
+            annotations:
+              summary: 'High HTTP 5xx Error Rate'
+              description: 'The backend is returning 500 server errors to users!'
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -243,6 +259,30 @@ metadata:
   name: alertmanager-config
   namespace: monitoring
 data:
+  email.tmpl: |
+    {{ define "email.html" }}
+    <div style="font-family: Arial, sans-serif; padding: 20px;">
+      <h2 style="color: #ff4d4f;">🔥 Grilli Alerts System: {{ .Status | toUpper }}</h2>
+      <p><b>Total Active Alerts:</b> {{ len .Alerts }}</p>
+      <table border="1" cellpadding="10" style="border-collapse: collapse; width: 100%;">
+        <tr style="background-color: #f0f0f0;">
+          <th>Alert Name</th>
+          <th>Severity</th>
+          <th>Summary</th>
+          <th>Description</th>
+        </tr>
+        {{ range .Alerts }}
+        <tr>
+          <td><b>{{ .Labels.alertname }}</b></td>
+          <td style="color: {{ if eq .Labels.severity "critical" }}red{{ else }}orange{{ end }};"><b>{{ .Labels.severity | toUpper }}</b></td>
+          <td>{{ .Annotations.summary }}</td>
+          <td>{{ .Annotations.description }}</td>
+        </tr>
+        {{ end }}
+      </table>
+    </div>
+    {{ end }}
+
   alertmanager.yml: |
     global:
       smtp_smarthost: 'smtp.gmail.com:587'
@@ -250,6 +290,9 @@ data:
       smtp_auth_username: 'harshit1924jain@gmail.com'
       smtp_auth_password_file: '/etc/alertmanager/secrets/SMTP_PASSWORD'
       smtp_require_tls: true
+
+    templates:
+      - '/etc/alertmanager/email.tmpl'
 
     route:
       group_by: ['alertname']
@@ -262,6 +305,7 @@ data:
     - name: 'email-admin'
       email_configs:
       - to: 'harshit1924jain@gmail.com'
+        html: '{{ template "email.html" . }}'
 ---
 apiVersion: apps/v1
 kind: Deployment

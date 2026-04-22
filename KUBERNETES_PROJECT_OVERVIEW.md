@@ -38,8 +38,9 @@ All manifests are organized within the `/k8s` directory for modular management:
 ### 4. Professional Monitoring (`monitoring.yaml`)
 
 - Dedicated **`monitoring` Namespace**: Isolates observability tools from the main application.
-- **Prometheus**: Scrapes performance metrics from all running pods.
-- **Grafana**: Provides a dark-themed visual dashboard for real-time traffic and error tracking.
+- **Prometheus**: Scrapes performance metrics from all running pods and strictly evaluates codified `.rules` files for any system anomalies (e.g. CPU spikes, HTTP 5xx errors).
+- **Alertmanager**: A native incident-response engine that securely reads SMTP credentials from Kubernetes Secrets to push HTML-formatted email alerts the moment Prometheus flags an issue.
+- **Grafana**: Provides a dark-themed visual dashboard for live traffic analysis and telemetry tracking (decoupled from alerting logic for maximum persistence and stability).
 
 ---
 
@@ -70,7 +71,7 @@ The project uses automated scripts to streamline common tasks on Windows:
 
 - **`deploy.bat`**: The master deployment script. It builds Docker images, sets up the Metrics Server, and applies all application manifests in the correct order.
 - **`run.bat`**: A helper script to quickly port-forward the project to `localhost:80` for local access.
-- **`monitor.bat`**: Launches the Prometheus/Grafana dashboard for live cluster analytics.
+- **`monitor.bat`**: Launches bridges to all monitoring endpoints: Prometheus (`9090`), Alertmanager (`9093`), and Grafana (`3000`).
 
 ---
 
