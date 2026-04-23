@@ -31,6 +31,9 @@ data:
             regex: ([^:]+)(?::\d+)?
             replacement: $1:5000
             target_label: __address__
+      - job_name: 'kube-state-metrics'
+        static_configs:
+          - targets: ['kube-state-metrics.kube-system.svc.cluster.local:8080']
   alert.rules: |
     groups:
       - name: grilli-alerts

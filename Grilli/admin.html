@@ -170,8 +170,11 @@
                 }
 
                 if (data.length === 0) {
+                    root.innerHTML = '<div class="loading" style="color: #d1d1d1;">No reservations found yet.</div>';
+                    return;
+                }
 
-                    let html = `
+                let html = `
                     <table class="res-table">
                         <thead>
                             <tr>
