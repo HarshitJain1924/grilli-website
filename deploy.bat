@@ -22,6 +22,7 @@ echo Applying ConfigMaps and Secrets...
 kubectl apply -f k8s/monitoring.yaml
 kubectl apply -f k8s/configmap.yaml
 kubectl apply -f k8s/secrets.yaml
+kubectl apply -f k8s/mongodb.yaml
 
 :: 2. Backend
 echo Applying Backend...
